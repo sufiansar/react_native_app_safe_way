@@ -1,6 +1,6 @@
 import { request } from '../client';
 
-export const policeApi = {
+export const policeContactApi = {
   // Add Police Contact
   addPoliceContact: (data: { name: string; phone: string; stationName: string }) =>
     request('/police-contacts', {
