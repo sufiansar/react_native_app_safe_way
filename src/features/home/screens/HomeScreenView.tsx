@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Image, Pressable, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Image, Pressable, StatusBar, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../context/ThemeContext';
 import { HomeHeader } from '../components/HomeHeader';
@@ -7,11 +7,35 @@ import { SafetyStatusCard } from '../components/SafetyStatusCard';
 import { FeatureGrid } from '../components/FeatureGrid';
 import { CommunityPostCard } from '../components/CommunityPostCard';
 import { BottomNavbar } from '../components/BottomNavbar';
+import { postsApi } from '../../../services/api';
+import { ApiPost } from '../../../types';
 
 export const HomeScreenView: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { isDark, toggleTheme, cardBgClass, textPrimaryClass, textSecondaryClass } = useTheme();
   const [activeTab, setActiveTab] = useState<'home' | 'feed' | 'chat' | 'profile'>('home');
+
+  const [posts, setPosts] = useState<ApiPost[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState<boolean>(false);
+
+  // Fetch real posts feed from backend API
+  const fetchFeed = async () => {
+    setIsLoadingPosts(true);
+    try {
+      const res = await postsApi.getFeed();
+      if (res.success && Array.isArray(res.data)) {
+        setPosts(res.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch posts feed:', error);
+    } finally {
+      setIsLoadingPosts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFeed();
+  }, []);
 
   return (
     <View className={`flex-1 ${isDark ? 'bg-slate-950' : 'bg-[#FEFDF4]'}`}>
@@ -68,7 +92,17 @@ export const HomeScreenView: React.FC = () => {
               </Pressable>
             </View>
 
-            <CommunityPostCard />
+            {isLoadingPosts ? (
+              <View className="py-8 items-center">
+                <ActivityIndicator size="small" color="#F59E0B" />
+              </View>
+            ) : posts.length > 0 ? (
+              posts.slice(0, 2).map((post) => (
+                <CommunityPostCard key={post.id} post={post} onPostUpdated={fetchFeed} />
+              ))
+            ) : (
+              <CommunityPostCard onPostUpdated={fetchFeed} />
+            )}
           </View>
         </ScrollView>
       )}
@@ -94,7 +128,17 @@ export const HomeScreenView: React.FC = () => {
             </Pressable>
           </View>
 
-          <CommunityPostCard />
+          {isLoadingPosts ? (
+            <View className="py-12 items-center">
+              <ActivityIndicator size="large" color="#F59E0B" />
+            </View>
+          ) : posts.length > 0 ? (
+            posts.map((post) => (
+              <CommunityPostCard key={post.id} post={post} onPostUpdated={fetchFeed} />
+            ))
+          ) : (
+            <CommunityPostCard onPostUpdated={fetchFeed} />
+          )}
         </ScrollView>
       )}
 

@@ -23,6 +23,29 @@ export interface CommunityPost {
   sharesCount: number;
 }
 
+export interface ApiPostUser {
+  id: string;
+  name: string;
+  profileImage: string | null;
+  isGovernmentIdVerified: boolean;
+}
+
+export interface ApiPost {
+  id: string;
+  userId: string;
+  content: string;
+  images: string[];
+  tags: string[];
+  locationName?: string;
+  helpfulCount: number;
+  notHelpfulCount: number;
+  commentCount: number;
+  shareCount: number;
+  createdAt: string;
+  updatedAt: string;
+  user?: ApiPostUser;
+}
+
 export interface OnboardingSlide {
   id: string;
   image: any;
