@@ -29,6 +29,14 @@ export default function SignInScreen() {
       });
 
       if (res.success && res.data) {
+        if (res.data.requireTwoFA) {
+          router.push({
+            pathname: '/verify-2fa',
+            params: { email: email.trim() },
+          });
+          return;
+        }
+
         const token =
           res.data.token ||
           res.data.accessToken ||
@@ -153,11 +161,13 @@ export default function SignInScreen() {
                   </Text>
                 </Pressable>
 
-                <Pressable>
-                  <Text className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                    Forgot Password?
-                  </Text>
-                </Pressable>
+                <Link href="/forgot-password" asChild>
+                  <Pressable>
+                    <Text className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                      Forgot Password?
+                    </Text>
+                  </Pressable>
+                </Link>
               </View>
 
               {/* Submit Button */}

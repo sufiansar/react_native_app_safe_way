@@ -9,7 +9,7 @@ import {
   CommunityPostCard,
   BottomNavbar,
 } from '../components';
-import { postsApi } from '../../../services/api';
+import { postsApi, userApi } from '../../../services/api';
 import { ApiPost } from '../../../types';
 
 const MOCK_POSTMAN_POSTS: ApiPost[] = [
@@ -44,6 +44,7 @@ export const HomeScreenView: React.FC = () => {
 
   const [posts, setPosts] = useState<ApiPost[]>(MOCK_POSTMAN_POSTS);
   const [isLoadingPosts, setIsLoadingPosts] = useState<boolean>(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   // Fetch real posts feed from backend API
   const fetchFeed = async () => {
@@ -71,8 +72,21 @@ export const HomeScreenView: React.FC = () => {
     }
   };
 
+  // Fetch user profile from userApi
+  const fetchProfile = async () => {
+    try {
+      const res = await userApi.getMyProfile();
+      if (res.success && res.data) {
+        setUserProfile(res.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    }
+  };
+
   useEffect(() => {
     fetchFeed();
+    fetchProfile();
   }, []);
 
   return (
@@ -265,12 +279,23 @@ export const HomeScreenView: React.FC = () => {
 
           <View className="items-center pb-6">
             <Image
-              source={require('../../../../assets/images/avatar_sarah.png')}
-              className="w-24 h-24 rounded-full border-4 border-amber-400 mb-3"
+              source={
+                userProfile?.profileImage
+                  ? { uri: userProfile.profileImage }
+                  : require('../../../../assets/images/avatar_sarah.png')
+              }
+              className="w-24 h-24 rounded-full border-4 border-amber-400 mb-3 bg-slate-200"
             />
-            <Text className={`text-2xl font-extrabold ${textPrimaryClass}`}>Sarah Jenkins</Text>
-            <View className="bg-amber-500/20 px-3 py-1 rounded-full mt-1">
-              <Text className="text-xs font-bold text-amber-500">✓ Verified Traveler</Text>
+            <Text className={`text-2xl font-extrabold ${textPrimaryClass}`}>
+              {userProfile?.name || 'Sarah Jenkins'}
+            </Text>
+            <Text className={`text-xs ${textSecondaryClass} mt-0.5 mb-2`}>
+              {userProfile?.email || 'sarah@example.com'}
+            </Text>
+            <View className="bg-amber-500/20 px-3 py-1 rounded-full">
+              <Text className="text-xs font-bold text-amber-500">
+                {userProfile?.isGovernmentIdVerified ? '✓ Verified Traveler' : '✓ Basic Member'}
+              </Text>
             </View>
           </View>
 
