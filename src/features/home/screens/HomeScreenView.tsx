@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, Pressable, StatusBar, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../context/ThemeContext';
-import { HomeHeader } from '../components/HomeHeader';
-import { SafetyStatusCard } from '../components/SafetyStatusCard';
-import { FeatureGrid } from '../components/FeatureGrid';
-import { CommunityPostCard } from '../components/CommunityPostCard';
-import { BottomNavbar } from '../components/BottomNavbar';
+import {
+  HomeHeader,
+  SafetyStatusCard,
+  FeatureGrid,
+  CommunityPostCard,
+  BottomNavbar,
+} from '../components';
 import { postsApi } from '../../../services/api';
 import { ApiPost } from '../../../types';
 
