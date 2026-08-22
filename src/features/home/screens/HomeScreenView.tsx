@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, Pressable, StatusBar, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,6 +39,7 @@ const MOCK_POSTMAN_POSTS: ApiPost[] = [
 ];
 
 export const HomeScreenView: React.FC = () => {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isDark, toggleTheme, cardBgClass, textPrimaryClass, textSecondaryClass } = useTheme();
   const [activeTab, setActiveTab] = useState<'home' | 'feed' | 'chat' | 'profile'>('home');
@@ -266,7 +268,16 @@ export const HomeScreenView: React.FC = () => {
           className="flex-1 p-5"
           contentContainerStyle={{ paddingBottom: 110 }}
         >
-          <View className="flex-row justify-end mb-2">
+          <View className="flex-row justify-end items-center gap-2 mb-2">
+            <Pressable
+              onPress={() => router.push('/settings')}
+              className={`w-10 h-10 rounded-full items-center justify-center shadow-md ${
+                isDark ? 'bg-slate-800' : 'bg-white'
+              }`}
+            >
+              <Text className="text-base">⚙️</Text>
+            </Pressable>
+
             <Pressable
               onPress={toggleTheme}
               className={`w-10 h-10 rounded-full items-center justify-center shadow-md ${

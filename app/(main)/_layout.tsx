@@ -9,6 +9,7 @@ export default function MainLayout() {
       }}
     >
       <Stack.Screen name="home" />
+      <Stack.Screen name="settings" />
       <Stack.Screen name="details" options={{ title: 'Details', headerShown: true }} />
     </Stack>
   );
