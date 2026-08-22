@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, Image, Pressable, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, Pressable } from 'react-native';
 import { useTheme } from '../../../../context/ThemeContext';
 import { ApiPost } from '../../../../types';
 import { reactionsApi, postsApi } from '../../../../services/api';
@@ -20,19 +20,32 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({ post, onPo
   const [isUnhelpful, setIsUnhelpful] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Sync state whenever post prop changes
+  useEffect(() => {
+    if (post) {
+      setHelpfulCount(post.helpfulCount ?? 0);
+      setUnhelpfulCount(post.notHelpfulCount ?? 0);
+      setShareCount(post.shareCount ?? 0);
+    }
+  }, [post]);
+
   // Author details fallback
-  const authorName = post?.user?.name || 'Angelina';
+  const authorName = post?.user?.name || (post ? 'Traveler' : 'Angelina');
   const authorAvatar = post?.user?.profileImage
     ? { uri: post.user.profileImage }
     : require('../../../../../assets/images/avatar_angelina.png');
   const isVerified = post?.user?.isGovernmentIdVerified ?? true;
-  const timeAgo = post?.createdAt ? 'Just now' : '• 25min ago';
+  const timeAgo = post?.createdAt
+    ? `${new Date(post.createdAt).toLocaleDateString()}`
+    : '• 25min ago';
   const tags = post?.tags && post.tags.length > 0 ? post.tags : ['Road', 'Border', 'Route'];
   const contentText =
     post?.content ||
     'Namanga border was very smooth today. Immigration officers were helpful and the process took about 10 minutes. Visa on arrival payments accepted in USD and local currency.';
   const postImage = post?.images && post.images.length > 0
     ? { uri: post.images[0] }
+    : post
+    ? null
     : require('../../../../../assets/images/border_post.png');
 
   // Handle Real Reaction API (Helpful / Unhelpful)

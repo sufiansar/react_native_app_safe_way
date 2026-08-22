@@ -1,8 +1,9 @@
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 
-import { Button, Input, ScreenWrapper } from '@/components';
+import { Input, ScreenWrapper } from '@/components';
+import { userApi, authApi, setAuthToken } from '@/services/api';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -12,13 +13,61 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setErrorMessage('Please fill in all required fields.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
+
+    if (!agreeTerms) {
+      setErrorMessage('You must agree to the Terms of Service.');
+      return;
+    }
+
+    setErrorMessage('');
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const res = await userApi.registerUser({
+        name: name.trim(),
+        email: email.trim(),
+        passwordHash: password,
+      });
+
+      if (res.success) {
+        // Attempt login immediately after registration to fetch token
+        const loginRes = await authApi.login({
+          email: email.trim(),
+          passwordHash: password,
+        });
+
+        if (loginRes.success && loginRes.data) {
+          const token =
+            loginRes.data.token ||
+            loginRes.data.accessToken ||
+            loginRes.data.tempToken;
+
+          if (token) {
+            setAuthToken(token);
+          }
+        }
+
+        router.replace('/home');
+      } else {
+        setErrorMessage(res.message || 'Registration failed. Please try again.');
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Network request failed. Please check backend connection.');
+    } finally {
       setLoading(false);
-      router.replace('/home');
-    }, 1000);
+    }
   };
 
   return (
@@ -48,6 +97,14 @@ export default function SignUpScreen() {
 
             {/* Auth Card Container */}
             <View className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800">
+              {errorMessage ? (
+                <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-3.5 mb-4">
+                  <Text className="text-red-500 text-xs font-semibold text-center">
+                    {errorMessage}
+                  </Text>
+                </View>
+              ) : null}
+
               <Input
                 label="Full Name"
                 placeholder="John Doe"
@@ -109,37 +166,18 @@ export default function SignUpScreen() {
               {/* Submit Button */}
               <Pressable
                 onPress={handleSignUp}
-                disabled={!agreeTerms}
-                className={`w-full rounded-full py-4 items-center justify-center shadow-md ${
-                  agreeTerms
-                    ? 'bg-amber-500 active:bg-amber-600 shadow-amber-500/30'
-                    : 'bg-slate-300 opacity-60'
-                }`}
+                disabled={loading}
+                className="w-full bg-amber-500 active:bg-amber-600 rounded-full py-4 items-center justify-center shadow-md shadow-amber-500/30"
               >
-                <Text className="text-white font-bold text-base">Create Account</Text>
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white font-bold text-base">Create Account</Text>
+                )}
               </Pressable>
-
-              {/* Divider */}
-              <View className="flex-row items-center my-6">
-                <View className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
-                <Text className="mx-4 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Or register with
-                </Text>
-                <View className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
-              </View>
-
-              {/* Social Buttons */}
-              <View className="flex-row gap-3">
-                <View className="flex-1">
-                  <Button variant="social" title="Google" />
-                </View>
-                <View className="flex-1">
-                  <Button variant="social" title="Apple" />
-                </View>
-              </View>
             </View>
 
-            {/* Bottom Footer Navigation */}
+            {/* Bottom Sign In Prompt */}
             <View className="flex-row justify-center items-center mt-8">
               <Text className="text-sm text-slate-500 dark:text-slate-400">
                 Already have an account?{' '}

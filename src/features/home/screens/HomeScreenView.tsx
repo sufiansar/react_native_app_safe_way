@@ -12,12 +12,37 @@ import {
 import { postsApi } from '../../../services/api';
 import { ApiPost } from '../../../types';
 
+const MOCK_POSTMAN_POSTS: ApiPost[] = [
+  {
+    id: '6a1fb57fae2be5b4603c38c7',
+    userId: '6a12b6a4df14239feac319ed',
+    content: 'Had an amazing time here! The atmosphere is great and the coffee is perfect.',
+    images: [
+      'https://midnight-profile-image.s3.us-east-1.amazonaws.com/images/1780462974204-gqzdfckrgpt-unnamed.jpg',
+    ],
+    tags: ['Cafe', 'Food', 'Dhaka'],
+    locationName: "Friday's Food Restaurant",
+    helpfulCount: 14,
+    notHelpfulCount: 0,
+    commentCount: 8,
+    shareCount: 5,
+    createdAt: '2026-06-03T05:02:55.989Z',
+    updatedAt: '2026-06-03T05:02:55.989Z',
+    user: {
+      id: '6a12b6a4df14239feac319ed',
+      name: 'Sufian',
+      profileImage: null,
+      isGovernmentIdVerified: true,
+    },
+  },
+];
+
 export const HomeScreenView: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { isDark, toggleTheme, cardBgClass, textPrimaryClass, textSecondaryClass } = useTheme();
   const [activeTab, setActiveTab] = useState<'home' | 'feed' | 'chat' | 'profile'>('home');
 
-  const [posts, setPosts] = useState<ApiPost[]>([]);
+  const [posts, setPosts] = useState<ApiPost[]>(MOCK_POSTMAN_POSTS);
   const [isLoadingPosts, setIsLoadingPosts] = useState<boolean>(false);
 
   // Fetch real posts feed from backend API

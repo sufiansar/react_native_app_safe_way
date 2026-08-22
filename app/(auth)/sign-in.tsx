@@ -1,8 +1,9 @@
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 
-import { Button, Input, ScreenWrapper } from '@/components';
+import { Input, ScreenWrapper } from '@/components';
+import { authApi, setAuthToken } from '@/services/api';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -10,13 +11,42 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
+    if (!email.trim() || !password.trim()) {
+      setErrorMessage('Please enter both email and password.');
+      return;
+    }
+
+    setErrorMessage('');
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const res = await authApi.login({
+        email: email.trim(),
+        passwordHash: password,
+      });
+
+      if (res.success && res.data) {
+        const token =
+          res.data.token ||
+          res.data.accessToken ||
+          res.data.tempToken;
+
+        if (token) {
+          setAuthToken(token);
+        }
+
+        router.replace('/home');
+      } else {
+        setErrorMessage(res.message || 'Invalid login credentials. Please try again.');
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Network request failed. Please check backend connection.');
+    } finally {
       setLoading(false);
-      router.replace('/home');
-    }, 1000);
+    }
   };
 
   return (
@@ -46,6 +76,14 @@ export default function SignInScreen() {
 
             {/* Auth Card Container */}
             <View className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800">
+              {errorMessage ? (
+                <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-3.5 mb-4">
+                  <Text className="text-red-500 text-xs font-semibold text-center">
+                    {errorMessage}
+                  </Text>
+                </View>
+              ) : null}
+
               <Input
                 label="Email Address"
                 placeholder="name@example.com"
@@ -93,32 +131,38 @@ export default function SignInScreen() {
               {/* Submit Button */}
               <Pressable
                 onPress={handleSignIn}
+                disabled={loading}
                 className="w-full bg-amber-500 active:bg-amber-600 rounded-full py-4 items-center justify-center shadow-md shadow-amber-500/30"
               >
-                <Text className="text-white font-bold text-base">Sign In</Text>
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white font-bold text-base">Sign In</Text>
+                )}
               </Pressable>
 
               {/* Divider */}
               <View className="flex-row items-center my-6">
                 <View className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
-                <Text className="mx-4 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Or continue with
+                <Text className="mx-4 text-xs font-medium text-slate-400 uppercase">
+                  or continue with
                 </Text>
                 <View className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
               </View>
 
-              {/* Social Buttons */}
-              <View className="flex-row gap-3">
-                <View className="flex-1">
-                  <Button variant="social" title="Google" />
-                </View>
-                <View className="flex-1">
-                  <Button variant="social" title="Apple" />
-                </View>
-              </View>
+              {/* Social Login Button */}
+              <Pressable
+                onPress={() => Alert.alert('Google Auth', 'Google Sign In initiated')}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full py-3.5 flex-row items-center justify-center"
+              >
+                <Text className="text-lg mr-2">🌐</Text>
+                <Text className="text-slate-700 dark:text-slate-200 font-semibold text-sm">
+                  Google
+                </Text>
+              </Pressable>
             </View>
 
-            {/* Bottom Footer Navigation */}
+            {/* Bottom Register Prompt */}
             <View className="flex-row justify-center items-center mt-8">
               <Text className="text-sm text-slate-500 dark:text-slate-400">
                 Don't have an account?{' '}
