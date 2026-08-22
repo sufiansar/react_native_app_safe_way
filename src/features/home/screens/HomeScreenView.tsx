@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, Pressable, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable, StatusBar, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../context/ThemeContext';
 import {
@@ -52,6 +52,14 @@ export const HomeScreenView: React.FC = () => {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 110 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoadingPosts}
+              onRefresh={fetchFeed}
+              tintColor="#F59E0B"
+              colors={['#F59E0B']}
+            />
+          }
           className="flex-1"
         >
           <HomeHeader topInset={insets.top} />
@@ -115,6 +123,14 @@ export const HomeScreenView: React.FC = () => {
           style={{ paddingTop: Math.max(insets.top, 24) }}
           className="flex-1 p-5"
           contentContainerStyle={{ paddingBottom: 110 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoadingPosts}
+              onRefresh={fetchFeed}
+              tintColor="#F59E0B"
+              colors={['#F59E0B']}
+            />
+          }
         >
           <View className="flex-row justify-between items-center mb-4">
             <Text className={`text-2xl font-extrabold ${textPrimaryClass}`}>
