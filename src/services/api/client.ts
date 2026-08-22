@@ -1,5 +1,5 @@
 // Base API URL configuration
-export const BASE_URL = 'http://localhost:5000/api/v1'; // Update with actual backend URL
+export const BASE_URL = 'http://206.162.244.175:5020/api/v1'; // Update with actual backend URL
 
 let authToken: string | null = null;
 
@@ -32,12 +32,15 @@ export async function request<T = any>(
   }
 
   try {
+    console.log(`🌐 [API Request] ${options.method || 'GET'} -> ${url}`);
+
     const response = await fetch(url, {
       ...options,
       headers,
     });
 
     const data = await response.json();
+    console.log(`✅ [API Response ${response.status}] ${url}:`, JSON.stringify(data).substring(0, 150));
 
     if (!response.ok) {
       return {
@@ -53,6 +56,7 @@ export async function request<T = any>(
       message: data.message,
     };
   } catch (error: any) {
+    console.error(`❌ [API Error] ${url}:`, error.message || error);
     return {
       success: false,
       message: error.message || 'Network request failed',
@@ -73,6 +77,8 @@ export async function uploadRequest<T = any>(
   }
 
   try {
+    console.log(`📤 [API Upload Request] POST -> ${url}`);
+
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -95,6 +101,7 @@ export async function uploadRequest<T = any>(
       message: data.message,
     };
   } catch (error: any) {
+    console.error(`❌ [Upload Error] ${url}:`, error.message || error);
     return {
       success: false,
       message: error.message || 'Network upload failed',

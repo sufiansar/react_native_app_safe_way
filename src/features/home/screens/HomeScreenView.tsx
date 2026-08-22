@@ -25,8 +25,19 @@ export const HomeScreenView: React.FC = () => {
     setIsLoadingPosts(true);
     try {
       const res = await postsApi.getFeed();
-      if (res.success && Array.isArray(res.data)) {
-        setPosts(res.data);
+      if (res.success && res.data) {
+        let feedList: ApiPost[] = [];
+        if (Array.isArray(res.data)) {
+          feedList = res.data;
+        } else if (Array.isArray((res.data as any).data)) {
+          feedList = (res.data as any).data;
+        } else if (Array.isArray((res.data as any).posts)) {
+          feedList = (res.data as any).posts;
+        }
+
+        if (feedList.length > 0) {
+          setPosts(feedList);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch posts feed:', error);
