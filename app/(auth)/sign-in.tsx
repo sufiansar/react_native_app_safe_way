@@ -1,6 +1,6 @@
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 
 import { Input, ScreenWrapper } from '@/components';
 import { authApi, setAuthToken } from '@/services/api';
@@ -44,6 +44,38 @@ export default function SignInScreen() {
       }
     } catch (error: any) {
       setErrorMessage(error.message || 'Network request failed. Please check backend connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setErrorMessage('');
+
+    // Sample ID Token from Postman collection for Google Auth test
+    const sampleGoogleToken =
+      'eyJhbGciOiJSUzI1NiIsImtpZCI6ImVlYzIxN2Q0MThjYjhlNWEzMTQzMThhMGQyZmZhNGUwY2ViMmU0Y2MiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiUmFuYSBTaGVpa2giLCJlbWFpbCI6InJhbmE2NDI0c2hlaWtoQGdtYWlsLmNvbSJ9';
+
+    try {
+      const res = await authApi.googleAuth(sampleGoogleToken);
+
+      if (res.success && res.data) {
+        const token =
+          res.data.token ||
+          res.data.accessToken ||
+          res.data.tempToken;
+
+        if (token) {
+          setAuthToken(token);
+        }
+
+        router.replace('/home');
+      } else {
+        setErrorMessage(res.message || 'Google Sign-In failed.');
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Google Sign-In network error.');
     } finally {
       setLoading(false);
     }
@@ -150,10 +182,11 @@ export default function SignInScreen() {
                 <View className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
               </View>
 
-              {/* Social Login Button */}
+              {/* Google Social Login Button */}
               <Pressable
-                onPress={() => Alert.alert('Google Auth', 'Google Sign In initiated')}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full py-3.5 flex-row items-center justify-center"
+                onPress={handleGoogleSignIn}
+                disabled={loading}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full py-3.5 flex-row items-center justify-center active:bg-slate-100"
               >
                 <Text className="text-lg mr-2">🌐</Text>
                 <Text className="text-slate-700 dark:text-slate-200 font-semibold text-sm">

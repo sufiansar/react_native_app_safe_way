@@ -55,11 +55,11 @@ export const authApi = {
       body: JSON.stringify(data),
     }),
 
-  // Google Authentication
+  // Google Authentication (Sends both idToken and token)
   googleAuth: (idToken: string) =>
     request('/auth/google', {
       method: 'POST',
-      body: JSON.stringify({ token: idToken }),
+      body: JSON.stringify({ idToken, token: idToken }),
     }),
 
   // Send OTP
