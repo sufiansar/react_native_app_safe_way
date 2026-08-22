@@ -4,10 +4,21 @@ import { useTheme } from '../../../../context/ThemeContext';
 
 interface HomeHeaderProps {
   topInset: number;
+  userProfile?: {
+    name?: string;
+    profileImage?: string | null;
+    location?: string;
+  } | null;
 }
 
-export const HomeHeader: React.FC<HomeHeaderProps> = ({ topInset }) => {
+export const HomeHeader: React.FC<HomeHeaderProps> = ({ topInset, userProfile }) => {
   const { isDark, toggleTheme } = useTheme();
+
+  const userName = userProfile?.name ? userProfile.name.split(' ')[0] : 'Sarah';
+  const avatarSource = userProfile?.profileImage
+    ? { uri: userProfile.profileImage }
+    : require('../../../../../assets/images/avatar_sarah.png');
+  const userLocation = userProfile?.location || '123 Main St, SF';
 
   return (
     <ImageBackground
@@ -21,8 +32,8 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({ topInset }) => {
         <View className="flex-row items-center gap-3">
           <View className="relative">
             <Image
-              source={require('../../../../../assets/images/avatar_sarah.png')}
-              className="w-11 h-11 rounded-full border-2 border-white/80"
+              source={avatarSource}
+              className="w-11 h-11 rounded-full border-2 border-white/80 bg-slate-200"
             />
             <View className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border border-white" />
           </View>
@@ -30,12 +41,12 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({ topInset }) => {
           <View>
             <View className="flex-row items-center">
               <Text className="text-white font-extrabold text-base">
-                Hi, Sarah
+                Hi, {userName}
               </Text>
               <Text className="ml-1 text-base">👋</Text>
             </View>
             <Pressable className="flex-row items-center bg-white/20 px-2.5 py-1 rounded-full mt-1">
-              <Text className="text-xs text-white">📍 123 Main St, SF</Text>
+              <Text className="text-xs text-white">📍 {userLocation}</Text>
               <Text className="text-[10px] text-white/80 ml-1">▼</Text>
             </Pressable>
           </View>

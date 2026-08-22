@@ -114,7 +114,7 @@ export const HomeScreenView: React.FC = () => {
           }
           className="flex-1"
         >
-          <HomeHeader topInset={insets.top} />
+          <HomeHeader topInset={insets.top} userProfile={userProfile} />
           <SafetyStatusCard />
           <FeatureGrid />
 
