@@ -1,10 +1,6 @@
 import React from 'react';
-import { View, ViewProps } from 'react-native';
-
-interface ScreenWrapperProps extends ViewProps {
-  children: React.ReactNode;
-  className?: string;
-}
+import { View } from 'react-native';
+import { ScreenWrapperProps } from './types';
 
 export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
   children,

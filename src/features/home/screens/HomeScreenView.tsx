@@ -1,0 +1,204 @@
+import React, { useState } from 'react';
+import { View, Text, ScrollView, Image, Pressable, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../../context/ThemeContext';
+import { HomeHeader } from '../components/HomeHeader';
+import { SafetyStatusCard } from '../components/SafetyStatusCard';
+import { FeatureGrid } from '../components/FeatureGrid';
+import { CommunityPostCard } from '../components/CommunityPostCard';
+import { BottomNavbar } from '../components/BottomNavbar';
+
+export const HomeScreenView: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  const { isDark, toggleTheme, cardBgClass, textPrimaryClass, textSecondaryClass } = useTheme();
+  const [activeTab, setActiveTab] = useState<'home' | 'feed' | 'chat' | 'profile'>('home');
+
+  return (
+    <View className={`flex-1 ${isDark ? 'bg-slate-950' : 'bg-[#FEFDF4]'}`}>
+      <StatusBar
+        barStyle="light-content"
+        translucent
+        backgroundColor="transparent"
+      />
+
+      {/* Tab 1: Home View */}
+      {activeTab === 'home' && (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 110 }}
+          className="flex-1"
+        >
+          <HomeHeader topInset={insets.top} />
+          <SafetyStatusCard />
+          <FeatureGrid />
+
+          {/* Safety Alerts & Warnings */}
+          <View className="mt-6 px-5">
+            <View className="flex-row items-center mb-3">
+              <Text className="text-base mr-1.5">⚠️</Text>
+              <Text className={`text-base font-bold ${textPrimaryClass}`}>
+                Safety alerts & warnings
+              </Text>
+            </View>
+
+            <View
+              className={`rounded-2xl p-4 border-t-4 border-t-red-500 border-x border-b ${
+                isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-sm'
+              }`}
+            >
+              <Text className={`text-xs leading-5 ${textSecondaryClass}`}>
+                Your legal name and ID details will never appear on your profile. Only a 'Verified Traveler' badge will be shown.
+              </Text>
+            </View>
+          </View>
+
+          {/* Community Section */}
+          <View className="mt-6 px-5 mb-10">
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center">
+                <Text className="text-base mr-1.5">👥</Text>
+                <Text className={`text-lg font-bold ${textPrimaryClass}`}>
+                  Community
+                </Text>
+              </View>
+              <Pressable onPress={() => setActiveTab('feed')}>
+                <Text className="text-xs font-bold text-amber-500">
+                  See more
+                </Text>
+              </Pressable>
+            </View>
+
+            <CommunityPostCard />
+          </View>
+        </ScrollView>
+      )}
+
+      {/* Tab 2: Feed / Community View */}
+      {activeTab === 'feed' && (
+        <ScrollView
+          style={{ paddingTop: Math.max(insets.top, 24) }}
+          className="flex-1 p-5"
+          contentContainerStyle={{ paddingBottom: 110 }}
+        >
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className={`text-2xl font-extrabold ${textPrimaryClass}`}>
+              Travel Feed & Updates
+            </Text>
+            <Pressable
+              onPress={toggleTheme}
+              className={`w-10 h-10 rounded-full items-center justify-center shadow-md ${
+                isDark ? 'bg-slate-800' : 'bg-white'
+              }`}
+            >
+              <Text className="text-base">{isDark ? '🌙' : '☀️'}</Text>
+            </Pressable>
+          </View>
+
+          <CommunityPostCard />
+        </ScrollView>
+      )}
+
+      {/* Tab 3: Chat View */}
+      {activeTab === 'chat' && (
+        <ScrollView
+          style={{ paddingTop: Math.max(insets.top, 24) }}
+          className="flex-1 p-5"
+          contentContainerStyle={{ paddingBottom: 110 }}
+        >
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className={`text-2xl font-extrabold ${textPrimaryClass}`}>
+              Travel Companion Messages
+            </Text>
+            <Pressable
+              onPress={toggleTheme}
+              className={`w-10 h-10 rounded-full items-center justify-center shadow-md ${
+                isDark ? 'bg-slate-800' : 'bg-white'
+              }`}
+            >
+              <Text className="text-base">{isDark ? '🌙' : '☀️'}</Text>
+            </Pressable>
+          </View>
+
+          <View className="gap-3">
+            {[
+              { name: 'Angelina', msg: 'The border check was smooth! Let me know if you need info.', time: '2m ago' },
+              { name: 'Safety Officer Mike', msg: 'Alert: Heavy rain on Highway 4. Drive carefully!', time: '15m ago' },
+              { name: 'Travel Group SF', msg: 'Anyone heading to Downtown around 4 PM?', time: '1h ago' },
+            ].map((chat, idx) => (
+              <Pressable
+                key={idx}
+                className={`p-4 rounded-2xl border flex-row items-center gap-3 ${cardBgClass}`}
+              >
+                <View className="w-12 h-12 rounded-full bg-amber-500/20 items-center justify-center">
+                  <Text className="text-lg">💬</Text>
+                </View>
+                <View className="flex-1">
+                  <View className="flex-row justify-between mb-1">
+                    <Text className={`font-bold text-sm ${textPrimaryClass}`}>{chat.name}</Text>
+                    <Text className={`text-[10px] ${textSecondaryClass}`}>{chat.time}</Text>
+                  </View>
+                  <Text className={`text-xs ${textSecondaryClass}`} numberOfLines={1}>
+                    {chat.msg}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+
+      {/* Tab 4: Profile View */}
+      {activeTab === 'profile' && (
+        <ScrollView
+          style={{ paddingTop: Math.max(insets.top, 24) }}
+          className="flex-1 p-5"
+          contentContainerStyle={{ paddingBottom: 110 }}
+        >
+          <View className="flex-row justify-end mb-2">
+            <Pressable
+              onPress={toggleTheme}
+              className={`w-10 h-10 rounded-full items-center justify-center shadow-md ${
+                isDark ? 'bg-slate-800' : 'bg-white'
+              }`}
+            >
+              <Text className="text-base">{isDark ? '🌙' : '☀️'}</Text>
+            </Pressable>
+          </View>
+
+          <View className="items-center pb-6">
+            <Image
+              source={require('../../../../assets/images/avatar_sarah.png')}
+              className="w-24 h-24 rounded-full border-4 border-amber-400 mb-3"
+            />
+            <Text className={`text-2xl font-extrabold ${textPrimaryClass}`}>Sarah Jenkins</Text>
+            <View className="bg-amber-500/20 px-3 py-1 rounded-full mt-1">
+              <Text className="text-xs font-bold text-amber-500">✓ Verified Traveler</Text>
+            </View>
+          </View>
+
+          <View className={`rounded-3xl p-5 border gap-4 ${cardBgClass}`}>
+            <View className={`flex-row items-center justify-between border-b pb-3 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+              <Text className={`text-sm font-semibold ${textPrimaryClass}`}>Emergency Contacts</Text>
+              <Text className="text-xs font-bold text-amber-500">3 Added</Text>
+            </View>
+            <View className={`flex-row items-center justify-between border-b pb-3 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+              <Text className={`text-sm font-semibold ${textPrimaryClass}`}>Live Location Sharing</Text>
+              <Text className="text-xs font-bold text-emerald-500">Enabled</Text>
+            </View>
+            <View className="flex-row items-center justify-between">
+              <Text className={`text-sm font-semibold ${textPrimaryClass}`}>Safe Places Reviews</Text>
+              <Text className="text-xs font-bold text-amber-500">12 Given</Text>
+            </View>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* Bottom Navbar */}
+      <BottomNavbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        bottomInset={insets.bottom}
+      />
+    </View>
+  );
+};

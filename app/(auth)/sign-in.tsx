@@ -15,14 +15,14 @@ export default function SignInScreen() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      router.replace('/');
+      router.replace('/home');
     }, 1000);
   };
 
   return (
     <ScreenWrapper className="flex-1 bg-slate-50 dark:bg-slate-950">
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         <ScrollView
@@ -33,14 +33,14 @@ export default function SignInScreen() {
           <View className="flex-1 justify-center px-6 py-10">
             {/* Top Brand Header */}
             <View className="items-center mb-8">
-              <View className="w-16 h-16 rounded-3xl bg-blue-600 items-center justify-center shadow-lg shadow-blue-500/30 mb-4">
-                <Text className="text-white text-3xl font-black">A</Text>
+              <View className="w-16 h-16 rounded-3xl bg-amber-500 items-center justify-center shadow-lg shadow-amber-500/30 mb-4">
+                <Text className="text-white text-3xl font-black">S</Text>
               </View>
               <Text className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight text-center">
                 Welcome Back
               </Text>
               <Text className="text-base text-slate-500 dark:text-slate-400 mt-2 text-center">
-                Sign in to your account to continue
+                Sign in to your Safeway account
               </Text>
             </View>
 
@@ -72,7 +72,7 @@ export default function SignInScreen() {
                   <View
                     className={`w-5 h-5 rounded-md border items-center justify-center mr-2 ${
                       rememberMe
-                        ? 'bg-blue-600 border-blue-600'
+                        ? 'bg-amber-500 border-amber-500'
                         : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800'
                     }`}
                   >
@@ -84,14 +84,19 @@ export default function SignInScreen() {
                 </Pressable>
 
                 <Pressable>
-                  <Text className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                  <Text className="text-sm font-semibold text-amber-600 dark:text-amber-400">
                     Forgot Password?
                   </Text>
                 </Pressable>
               </View>
 
               {/* Submit Button */}
-              <Button title="Sign In" onPress={handleSignIn} loading={loading} />
+              <Pressable
+                onPress={handleSignIn}
+                className="w-full bg-amber-500 active:bg-amber-600 rounded-full py-4 items-center justify-center shadow-md shadow-amber-500/30"
+              >
+                <Text className="text-white font-bold text-base">Sign In</Text>
+              </Pressable>
 
               {/* Divider */}
               <View className="flex-row items-center my-6">
@@ -118,9 +123,9 @@ export default function SignInScreen() {
               <Text className="text-sm text-slate-500 dark:text-slate-400">
                 Don't have an account?{' '}
               </Text>
-              <Link href="/(auth)/sign-up" asChild>
+              <Link href="/sign-up" asChild>
                 <Pressable>
-                  <Text className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                  <Text className="text-sm font-bold text-amber-600 dark:text-amber-400">
                     Sign Up
                   </Text>
                 </Pressable>

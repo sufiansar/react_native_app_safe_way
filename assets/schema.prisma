@@ -1,0 +1,1068 @@
+// ============================================================================
+// ContextPro360 — DOT Capital Delivery Work Breakdown Structure Platform
+// PostgreSQL schema (Prisma)
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_INVITE
+}
+
+enum RoleScope {
+  ORGANIZATION // applies org-wide (e.g. Director, Finance)
+  PROJECT      // applies only when assigned to a specific project
+}
+
+enum ProjectStatus {
+  PLANNING
+  DESIGN
+  PROCUREMENT
+  RIGHT_OF_WAY
+  UTILITY_COORDINATION
+  CONSTRUCTION
+  CLOSEOUT
+  WARRANTY
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum HealthStatus {
+  GREEN
+  YELLOW
+  RED
+}
+
+enum RiskStatus {
+  IDENTIFIED
+  MITIGATING
+  MONITORING
+  CLOSED
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ActivityStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+  ON_HOLD
+}
+
+enum ChangeOrderStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  EXECUTED
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  COMPLETED
+  CLOSED
+}
+
+enum SolicitationStatus {
+  DRAFT
+  ADVERTISED
+  UNDER_EVALUATION
+  AWARDED
+  CLOSED
+}
+
+enum BidStatus {
+  SUBMITTED
+  RESPONSIVE
+  NON_RESPONSIVE
+  AWARDED
+  REJECTED
+}
+
+enum InspectionResult {
+  PENDING
+  PASSED
+  FAILED
+  REINSPECTION_REQUIRED
+}
+
+enum RfiStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  ANSWERED
+  CLOSED
+}
+
+enum SubmittalStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  APPROVED_AS_NOTED
+  REVISE_AND_RESUBMIT
+  REJECTED
+}
+
+enum DeficiencyStatus {
+  OPEN
+  ASSIGNED
+  CORRECTED
+  VERIFIED
+  CLOSED
+}
+
+enum ParcelStatus {
+  IDENTIFIED
+  SURVEY_COMPLETE
+  APPRAISAL_COMPLETE
+  OFFER_MADE
+  NEGOTIATION
+  AGREEMENT_SIGNED
+  CLOSING_SCHEDULED
+  ACQUIRED
+  CERTIFIED
+}
+
+enum UtilityConflictStatus {
+  IDENTIFIED
+  INVESTIGATION
+  DESIGN_REVIEW
+  AGREEMENT
+  RELOCATION_SCHEDULED
+  RELOCATED
+  VERIFIED
+  CLOSED
+}
+
+enum PermitStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DENIED
+  EXPIRED
+}
+
+enum InvoiceStatus {
+  SUBMITTED
+  APPROVED
+  PAID
+  REJECTED
+}
+
+enum IncidentSeverity {
+  NEAR_MISS
+  FIRST_AID
+  MEDICAL_TREATMENT
+  LOST_TIME
+  FATALITY
+}
+
+enum IncidentStatus {
+  REPORTED
+  UNDER_INVESTIGATION
+  CORRECTIVE_ACTION
+  CLOSED
+}
+
+enum WorkOrderStatus {
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CLOSED
+}
+
+enum DocumentCategory {
+  CONTRACT
+  DRAWING
+  SPECIFICATION
+  RFI
+  SUBMITTAL
+  CHANGE_ORDER
+  DAILY_REPORT
+  INSPECTION_REPORT
+  MEETING_MINUTES
+  AS_BUILT
+  PERMIT
+  CORRESPONDENCE
+  OTHER
+}
+
+// ============================================================================
+// IDENTITY, TENANCY & ACCESS CONTROL
+// ============================================================================
+
+/// A tenant — one government agency or company using the platform.
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  type        String // Government Agency, Engineering Consultant, Contractor, Utility Company, etc.
+  address     String?
+  website     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users        User[]
+  roles        Role[]
+  portfolios   Portfolio[]
+  programs     Program[]
+  projects     Project[]
+  vendors      Vendor[]
+  fundingSources FundingSource[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String     @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String     @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  jobTitle       String?
+  phone          String?
+  status         UserStatus @default(PENDING_INVITE)
+  mfaEnabled     Boolean    @default(false)
+  lastLoginAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  userRoles        UserRole[]
+  projectMembers   ProjectMember[]
+  documentsUploaded Document[]        @relation("DocumentUploadedBy")
+  assignedIssues   Issue[]            @relation("IssueAssignee")
+  assignedRisks    Risk[]             @relation("RiskOwner")
+  inspections      Inspection[]       @relation("InspectionInspector")
+  dailyReports     DailyReport[]      @relation("DailyReportAuthor")
+  incidentsReported SafetyIncident[]  @relation("IncidentReportedBy")
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+/// A named permission bundle, e.g. "Project Manager", "Inspector", "Finance Manager".
+/// ORGANIZATION-scoped roles apply platform/org-wide; PROJECT-scoped roles are granted
+/// per-project through ProjectMember.
+model Role {
+  id             String       @id @default(uuid())
+  organizationId String?      // null = system/global role template shared across tenants
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String // e.g. Director, Program Controls Manager, Inspector, Contractor
+  description    String?
+  scope          RoleScope
+  isSystemRole   Boolean      @default(false) // seeded role vs. custom org-defined role
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+  projectMembers  ProjectMember[]
+
+  @@unique([organizationId, name])
+  @@map("roles")
+}
+
+/// A single grantable capability, e.g. "project.budget.approve", "rfi.create".
+model Permission {
+  id          String @id @default(uuid())
+  key         String @unique // module.resource.action, e.g. "schedule.activity.update"
+  module      String // Program Controls, Procurement, Construction, Finance, ...
+  description String?
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+/// Many-to-many: which permissions a role grants.
+model RolePermission {
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+/// Many-to-many: a user's org-wide role assignments (e.g. Finance Manager, Director).
+model UserRole {
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  grantedAt DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+/// Many-to-many (with attributes): a user's role on ONE specific project.
+/// This is what makes RBAC project-aware — the same user can be Project Manager
+/// on Project A and Inspector on Project B.
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id])
+  assignedAt DateTime @default(now())
+
+  @@unique([projectId, userId, roleId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+// ============================================================================
+// PORTFOLIO / PROGRAM / PROJECT HIERARCHY
+// ============================================================================
+
+model Portfolio {
+  id             String   @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+
+  programs Program[]
+
+  @@map("portfolios")
+}
+
+model Program {
+  id             String     @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  portfolioId    String?
+  portfolio      Portfolio? @relation(fields: [portfolioId], references: [id])
+  name           String // Renew Atlanta, TSPLOST, Moving Atlanta Forward, ...
+  description    String?
+  managerId      String?
+
+  projects Project[]
+
+  @@map("programs")
+}
+
+model Project {
+  id               String        @id @default(uuid())
+  organizationId   String
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  programId        String?
+  program          Program?      @relation(fields: [programId], references: [id])
+  projectNumber    String
+  name             String
+  county           String?
+  district         String?
+  deliveryMethod   String?
+  status           ProjectStatus @default(PLANNING)
+  healthStatus     HealthStatus  @default(GREEN)
+  startDate        DateTime?
+  plannedFinish    DateTime?
+  forecastFinish   DateTime?
+  actualFinish     DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  members          ProjectMember[]
+  wbsItems         WbsItem[]
+  milestones       Milestone[]
+  budgets          Budget[]
+  changeOrders     ChangeOrder[]
+  risks            Risk[]
+  issues           Issue[]
+  activities       ScheduleActivity[]
+  designPackages   DesignPackage[]
+  parcels          Parcel[]
+  utilityConflicts UtilityConflict[]
+  permits          Permit[]
+  solicitations    Solicitation[]
+  contracts        Contract[]
+  dailyReports     DailyReport[]
+  inspections      Inspection[]
+  rfis             Rfi[]
+  submittals       Submittal[]
+  punchListItems   PunchListItem[]
+  safetyIncidents  SafetyIncident[]
+  documents        Document[]
+  fundingAllocations ProjectFunding[]
+
+  @@unique([organizationId, projectNumber])
+  @@index([organizationId])
+  @@map("projects")
+}
+
+/// Self-referential hierarchy matching the WBS (1.0 Project Initiation, 1.1 ..., etc.)
+model WbsItem {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    WbsItem? @relation("WbsHierarchy", fields: [parentId], references: [id])
+  children  WbsItem[] @relation("WbsHierarchy")
+  code      String // e.g. "3.2" (Preliminary Design)
+  name      String
+  percentComplete Decimal @default(0) @db.Decimal(5, 2)
+
+  @@unique([projectId, code])
+  @@map("wbs_items")
+}
+
+model Milestone {
+  id           String    @id @default(uuid())
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name         String // Notice to Proceed, Substantial Completion, Final Acceptance, ...
+  plannedDate  DateTime
+  forecastDate DateTime?
+  actualDate   DateTime?
+
+  @@map("milestones")
+}
+
+// ============================================================================
+// PROGRAM CONTROLS: BUDGET, COST, SCHEDULE, RISK, ISSUES, CHANGE ORDERS
+// ============================================================================
+
+model FundingSource {
+  id             String   @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String // Federal, State, Local, Grant, Bond, SPLOST, TSPLOST, ...
+  type           String
+
+  allocations ProjectFunding[]
+
+  @@map("funding_sources")
+}
+
+/// Many-to-many: a project can draw on several funding sources, and a funding
+/// source can back several projects — the join table carries the amount.
+model ProjectFunding {
+  id              String        @id @default(uuid())
+  projectId       String
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fundingSourceId String
+  fundingSource   FundingSource @relation(fields: [fundingSourceId], references: [id])
+  authorizedAmount Decimal      @db.Decimal(14, 2)
+  obligatedAmount  Decimal      @default(0) @db.Decimal(14, 2)
+  expendedAmount   Decimal      @default(0) @db.Decimal(14, 2)
+
+  @@unique([projectId, fundingSourceId])
+  @@map("project_funding")
+}
+
+model Budget {
+  id              String   @id @default(uuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  originalAmount  Decimal  @db.Decimal(14, 2)
+  currentAmount   Decimal  @db.Decimal(14, 2)
+  contingency     Decimal  @default(0) @db.Decimal(14, 2)
+  createdAt       DateTime @default(now())
+
+  lineItems BudgetLineItem[]
+
+  @@map("budgets")
+}
+
+model BudgetLineItem {
+  id       String  @id @default(uuid())
+  budgetId String
+  budget   Budget  @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  category String // Construction, Engineering, ROW, Utilities, Environmental, CEI, 
+  amount   Decimal @db.Decimal(14, 2)
+
+  costEntries CostEntry[]
+
+  @@map("budget_line_items")
+}
+
+model CostEntry {
+  id              String         @id @default(uuid())
+  budgetLineItemId String
+  budgetLineItem  BudgetLineItem @relation(fields: [budgetLineItemId], references: [id], onDelete: Cascade)
+  description     String
+  amount          Decimal        @db.Decimal(14, 2)
+  incurredOn      DateTime
+
+  @@map("cost_entries")
+}
+
+model ChangeOrder {
+  id           String            @id @default(uuid())
+  projectId    String
+  project      Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contractId   String?
+  contract     Contract?         @relation(fields: [contractId], references: [id])
+  number       String
+  description  String
+  costImpact   Decimal           @db.Decimal(14, 2)
+  timeImpactDays Int             @default(0)
+  status       ChangeOrderStatus @default(DRAFT)
+  createdAt    DateTime          @default(now())
+
+  @@unique([projectId, number])
+  @@map("change_orders")
+}
+
+model Risk {
+  id            String     @id @default(uuid())
+  projectId     String
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  description   String
+  category      String
+  probability   Int // 1-5
+  impact        Int // 1-5
+  ownerId       String?
+  owner         User?      @relation("RiskOwner", fields: [ownerId], references: [id])
+  mitigationPlan String?
+  status        RiskStatus @default(IDENTIFIED)
+
+  @@map("risks")
+}
+
+model Issue {
+  id           String      @id @default(uuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  description  String
+  priority     String
+  assigneeId   String?
+  assignee     User?       @relation("IssueAssignee", fields: [assigneeId], references: [id])
+  dueDate      DateTime?
+  status       IssueStatus @default(OPEN)
+
+  @@map("issues")
+}
+
+model ScheduleActivity {
+  id              String         @id @default(uuid())
+  projectId       String
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  activityCode    String
+  name            String
+  discipline      String?
+  plannedStart    DateTime
+  plannedFinish   DateTime
+  actualStart     DateTime?
+  actualFinish    DateTime?
+  percentComplete Decimal        @default(0) @db.Decimal(5, 2)
+  totalFloat      Int            @default(0)
+  isCritical      Boolean        @default(false)
+  status          ActivityStatus @default(NOT_STARTED)
+
+  predecessors ActivityDependency[] @relation("SuccessorActivity")
+  successors   ActivityDependency[] @relation("PredecessorActivity")
+
+  @@unique([projectId, activityCode])
+  @@map("schedule_activities")
+}
+
+/// Many-to-many self-relation on ScheduleActivity modeling predecessor/successor
+/// links (finish-to-start, start-to-start, etc.) required for critical path analysis.
+model ActivityDependency {
+  id              String           @id @default(uuid())
+  predecessorId   String
+  predecessor     ScheduleActivity @relation("PredecessorActivity", fields: [predecessorId], references: [id], onDelete: Cascade)
+  successorId     String
+  successor       ScheduleActivity @relation("SuccessorActivity", fields: [successorId], references: [id], onDelete: Cascade)
+  dependencyType  String @default("FS") // FS, SS, FF, SF
+  lagDays         Int    @default(0)
+
+  @@unique([predecessorId, successorId])
+  @@map("activity_dependencies")
+}
+
+// ============================================================================
+// ENGINEERING & DESIGN
+// ============================================================================
+
+model DesignPackage {
+  id              String   @id @default(uuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name            String
+  designPhase     String // Conceptual, 30%, 60%, 90%, 100%
+  percentComplete Decimal  @default(0) @db.Decimal(5, 2)
+
+  drawings Drawing[]
+
+  @@map("design_packages")
+}
+
+model Drawing {
+  id              String        @id @default(uuid())
+  designPackageId String
+  designPackage   DesignPackage @relation(fields: [designPackageId], references: [id], onDelete: Cascade)
+  sheetNumber     String
+  title           String
+  revision        Int           @default(0)
+  documentId      String?
+  document        Document?     @relation(fields: [documentId], references: [id])
+
+  reviewComments ReviewComment[]
+
+  @@map("drawings")
+}
+
+model ReviewComment {
+  id        String   @id @default(uuid())
+  drawingId String
+  drawing   Drawing  @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  comment   String
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("review_comments")
+}
+
+// ============================================================================
+// RIGHT-OF-WAY
+// ============================================================================
+
+model PropertyOwner {
+  id      String @id @default(uuid())
+  name    String
+  contact String?
+
+  parcels Parcel[]
+
+  @@map("property_owners")
+}
+
+model Parcel {
+  id           String        @id @default(uuid())
+  projectId    String
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parcelNumber String
+  ownerId      String?
+  owner        PropertyOwner? @relation(fields: [ownerId], references: [id])
+  status       ParcelStatus  @default(IDENTIFIED)
+  requiredArea Decimal?      @db.Decimal(10, 2)
+
+  acquisition RowAcquisition?
+  easements   Easement[]
+
+  @@unique([projectId, parcelNumber])
+  @@map("parcels")
+}
+
+/// One-to-one: each parcel has at most one active acquisition record tracking
+/// offer/negotiation/closing — kept separate from Parcel because it has its
+/// own workflow and financial fields, not core parcel identity.
+model RowAcquisition {
+  id             String   @id @default(uuid())
+  parcelId       String   @unique
+  parcel         Parcel   @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  offerAmount    Decimal? @db.Decimal(14, 2)
+  settlementAmount Decimal? @db.Decimal(14, 2)
+  closingDate    DateTime?
+
+  @@map("row_acquisitions")
+}
+
+model Easement {
+  id       String  @id @default(uuid())
+  parcelId String
+  parcel   Parcel  @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  type     String
+  executed Boolean @default(false)
+
+  @@map("easements")
+}
+
+// ============================================================================
+// UTILITY COORDINATION
+// ============================================================================
+
+model UtilityCompany {
+  id      String @id @default(uuid())
+  name    String
+  contact String?
+  serviceType String // Water, Sewer, Gas, Electric, Fiber, Telecom, ...
+
+  conflicts   UtilityConflict[]
+  agreements  UtilityAgreement[]
+
+  @@map("utility_companies")
+}
+
+model UtilityConflict {
+  id               String                 @id @default(uuid())
+  projectId        String
+  project          Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  utilityCompanyId String
+  utilityCompany   UtilityCompany         @relation(fields: [utilityCompanyId], references: [id])
+  description      String
+  riskLevel        String
+  status           UtilityConflictStatus  @default(IDENTIFIED)
+
+  agreements UtilityAgreement[]
+
+  @@map("utility_conflicts")
+}
+
+model UtilityAgreement {
+  id                String          @id @default(uuid())
+  utilityConflictId String
+  utilityConflict   UtilityConflict @relation(fields: [utilityConflictId], references: [id], onDelete: Cascade)
+  utilityCompanyId  String
+  utilityCompany    UtilityCompany  @relation(fields: [utilityCompanyId], references: [id])
+  costResponsibility String
+  executedDate      DateTime?
+
+  @@map("utility_agreements")
+}
+
+// ============================================================================
+// ENVIRONMENTAL & PERMITTING
+// ============================================================================
+
+model Permit {
+  id          String       @id @default(uuid())
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  permitType  String // NPDES, Erosion Control, Utility, Environmental, Local Agency
+  agency      String
+  status      PermitStatus @default(SUBMITTED)
+  submittedOn DateTime     @default(now())
+  approvedOn  DateTime?
+
+  @@map("permits")
+}
+
+// ============================================================================
+// PROCUREMENT & CONTRACT ADMINISTRATION
+// ============================================================================
+
+model Vendor {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  dbeStatus      Boolean      @default(false)
+  insuranceStatus String?
+  performanceRating Decimal?  @db.Decimal(3, 2)
+
+  bids      Bid[]
+  contracts Contract[]
+
+  @@map("vendors")
+}
+
+model Solicitation {
+  id          String              @id @default(uuid())
+  projectId   String
+  project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number      String
+  type        String // RFP, RFQ, IFB
+  status      SolicitationStatus  @default(DRAFT)
+  advertisedOn DateTime?
+  closingDate DateTime?
+
+  bids Bid[]
+
+  @@unique([projectId, number])
+  @@map("solicitations")
+}
+
+model Bid {
+  id             String   @id @default(uuid())
+  solicitationId String
+  solicitation   Solicitation @relation(fields: [solicitationId], references: [id], onDelete: Cascade)
+  vendorId       String
+  vendor         Vendor   @relation(fields: [vendorId], references: [id])
+  proposalAmount Decimal  @db.Decimal(14, 2)
+  status         BidStatus @default(SUBMITTED)
+
+  contract Contract?
+
+  @@unique([solicitationId, vendorId])
+  @@map("bids")
+}
+
+model Contract {
+  id             String         @id @default(uuid())
+  projectId      String
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  vendorId       String
+  vendor         Vendor         @relation(fields: [vendorId], references: [id])
+  awardedBidId   String?        @unique
+  awardedBid     Bid?           @relation(fields: [awardedBidId], references: [id])
+  contractNumber String
+  originalValue  Decimal        @db.Decimal(14, 2)
+  currentValue   Decimal        @db.Decimal(14, 2)
+  status         ContractStatus @default(DRAFT)
+  noticeToProceed DateTime?
+  completionDate DateTime?
+
+  changeOrders ChangeOrder[]
+  invoices     Invoice[]
+
+  @@unique([projectId, contractNumber])
+  @@map("contracts")
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  contractId    String
+  contract      Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  invoiceNumber String
+  amount        Decimal       @db.Decimal(14, 2)
+  retainage     Decimal       @default(0) @db.Decimal(14, 2)
+  status        InvoiceStatus @default(SUBMITTED)
+  submittedOn   DateTime      @default(now())
+
+  payments Payment[]
+
+  @@unique([contractId, invoiceNumber])
+  @@map("invoices")
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount    Decimal  @db.Decimal(14, 2)
+  paidOn    DateTime @default(now())
+
+  @@map("payments")
+}
+
+// ============================================================================
+// CONSTRUCTION, CEI & FIELD OPERATIONS
+// ============================================================================
+
+model DailyReport {
+  id           String   @id @default(uuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User     @relation("DailyReportAuthor", fields: [authorId], references: [id])
+  reportDate   DateTime
+  weather      String?
+  workPerformed String?
+  crewSize     Int?
+  delays       String?
+
+  @@unique([projectId, reportDate, authorId])
+  @@map("daily_reports")
+}
+
+model Inspection {
+  id           String            @id @default(uuid())
+  projectId    String
+  project      Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inspectorId  String
+  inspector    User              @relation("InspectionInspector", fields: [inspectorId], references: [id])
+  category     String // Earthwork, Drainage, Utilities, Asphalt, Concrete, ...
+  inspectedOn  DateTime          @default(now())
+  result       InspectionResult  @default(PENDING)
+
+  deficiencies Deficiency[]
+
+  @@map("inspections")
+}
+
+model Deficiency {
+  id           String           @id @default(uuid())
+  inspectionId String
+  inspection   Inspection       @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  description  String
+  severity     String
+  dueDate      DateTime?
+  status       DeficiencyStatus @default(OPEN)
+
+  @@map("deficiencies")
+}
+
+model Rfi {
+  id           String    @id @default(uuid())
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number       String
+  subject      String
+  submittedOn  DateTime  @default(now())
+  dueDate      DateTime?
+  status       RfiStatus @default(DRAFT)
+  scheduleImpact Boolean @default(false)
+  costImpact     Boolean @default(false)
+
+  @@unique([projectId, number])
+  @@map("rfis")
+}
+
+model Submittal {
+  id            String          @id @default(uuid())
+  projectId     String
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number        String
+  specSection   String?
+  submittedOn   DateTime        @default(now())
+  status        SubmittalStatus @default(SUBMITTED)
+
+  @@unique([projectId, number])
+  @@map("submittals")
+}
+
+model PunchListItem {
+  id          String           @id @default(uuid())
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  description String
+  location    String?
+  priority    String?
+  dueDate     DateTime?
+  status      DeficiencyStatus @default(OPEN)
+
+  @@map("punch_list_items")
+}
+
+// ============================================================================
+// SAFETY
+// ============================================================================
+
+model SafetyIncident {
+  id           String           @id @default(uuid())
+  projectId    String
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reportedById String
+  reportedBy   User             @relation("IncidentReportedBy", fields: [reportedById], references: [id])
+  incidentType String
+  severity     IncidentSeverity
+  occurredOn   DateTime         @default(now())
+  rootCause    String?
+  status       IncidentStatus   @default(REPORTED)
+
+  @@map("safety_incidents")
+}
+
+// ============================================================================
+// ASSET MANAGEMENT & MAINTENANCE (post-construction)
+// ============================================================================
+
+model Asset {
+  id            String   @id @default(uuid())
+  organizationId String
+  assetType     String // Bridge, Sidewalk, Signal, Sign, Drainage, Lighting, ...
+  location      String?
+  conditionRating Decimal? @db.Decimal(3, 1)
+  installedOn   DateTime?
+
+  workOrders WorkOrder[]
+
+  @@map("assets")
+}
+
+model WorkOrder {
+  id           String          @id @default(uuid())
+  assetId      String
+  asset        Asset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  maintenanceType String
+  priority     String?
+  scheduledDate DateTime?
+  completedDate DateTime?
+  status       WorkOrderStatus @default(NEW)
+
+  @@map("work_orders")
+}
+
+// ============================================================================
+// DOCUMENT CONTROL
+// ============================================================================
+
+model Document {
+  id           String           @id @default(uuid())
+  projectId    String?
+  project      Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User             @relation("DocumentUploadedBy", fields: [uploadedById], references: [id])
+  category     DocumentCategory
+  title        String
+  storageUrl   String
+  currentVersion Int            @default(1)
+  createdAt    DateTime         @default(now())
+
+  versions DocumentVersion[]
+  drawings Drawing[]
+
+  @@map("documents")
+}
+
+/// One-to-many: full version history for a document (version control requirement
+/// called out repeatedly across every module in the source spec).
+model DocumentVersion {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  storageUrl String
+  uploadedAt DateTime @default(now())
+
+  @@unique([documentId, versionNumber])
+  @@map("document_versions")
+}
+
+// ============================================================================
+// NOTIFICATIONS & AUDIT
+// ============================================================================
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+/// Append-only audit trail. Required by nearly every dashboard in the spec
+/// ("Audit Trail" appears under Document Control, Legal, Finance, ROW, etc.)
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  entityType String // e.g. "ChangeOrder", "Contract"
+  entityId   String
+  action     String // CREATE, UPDATE, DELETE, APPROVE, ...
+  changes    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

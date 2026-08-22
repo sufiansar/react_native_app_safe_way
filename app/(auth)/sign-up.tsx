@@ -17,14 +17,14 @@ export default function SignUpScreen() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      router.replace('/');
+      router.replace('/home');
     }, 1000);
   };
 
   return (
     <ScreenWrapper className="flex-1 bg-slate-50 dark:bg-slate-950">
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         <ScrollView
@@ -35,14 +35,14 @@ export default function SignUpScreen() {
           <View className="flex-1 justify-center px-6 py-10">
             {/* Top Brand Header */}
             <View className="items-center mb-8">
-              <View className="w-16 h-16 rounded-3xl bg-blue-600 items-center justify-center shadow-lg shadow-blue-500/30 mb-4">
-                <Text className="text-white text-3xl font-black">A</Text>
+              <View className="w-16 h-16 rounded-3xl bg-amber-500 items-center justify-center shadow-lg shadow-amber-500/30 mb-4">
+                <Text className="text-white text-3xl font-black">S</Text>
               </View>
               <Text className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight text-center">
                 Create Account
               </Text>
               <Text className="text-base text-slate-500 dark:text-slate-400 mt-2 text-center">
-                Join us today and get started
+                Join Safeway today and get started
               </Text>
             </View>
 
@@ -88,7 +88,7 @@ export default function SignUpScreen() {
                 <View
                   className={`w-5 h-5 rounded-md border items-center justify-center mr-2.5 ${
                     agreeTerms
-                      ? 'bg-blue-600 border-blue-600'
+                      ? 'bg-amber-500 border-amber-500'
                       : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800'
                   }`}
                 >
@@ -96,23 +96,28 @@ export default function SignUpScreen() {
                 </View>
                 <Text className="text-xs text-slate-600 dark:text-slate-400 flex-1 leading-5">
                   I agree to the{' '}
-                  <Text className="font-semibold text-blue-600 dark:text-blue-400">
+                  <Text className="font-semibold text-amber-600 dark:text-amber-400">
                     Terms of Service
                   </Text>{' '}
                   and{' '}
-                  <Text className="font-semibold text-blue-600 dark:text-blue-400">
+                  <Text className="font-semibold text-amber-600 dark:text-amber-400">
                     Privacy Policy
                   </Text>
                 </Text>
               </Pressable>
 
               {/* Submit Button */}
-              <Button
-                title="Create Account"
+              <Pressable
                 onPress={handleSignUp}
-                loading={loading}
                 disabled={!agreeTerms}
-              />
+                className={`w-full rounded-full py-4 items-center justify-center shadow-md ${
+                  agreeTerms
+                    ? 'bg-amber-500 active:bg-amber-600 shadow-amber-500/30'
+                    : 'bg-slate-300 opacity-60'
+                }`}
+              >
+                <Text className="text-white font-bold text-base">Create Account</Text>
+              </Pressable>
 
               {/* Divider */}
               <View className="flex-row items-center my-6">
@@ -139,9 +144,9 @@ export default function SignUpScreen() {
               <Text className="text-sm text-slate-500 dark:text-slate-400">
                 Already have an account?{' '}
               </Text>
-              <Link href="/(auth)/sign-in" asChild>
+              <Link href="/sign-in" asChild>
                 <Pressable>
-                  <Text className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                  <Text className="text-sm font-bold text-amber-600 dark:text-amber-400">
                     Sign In
                   </Text>
                 </Pressable>

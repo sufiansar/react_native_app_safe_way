@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TextInputProps, Pressable } from 'react-native';
-
-interface InputProps extends TextInputProps {
-  label: string;
-  error?: string;
-  isPassword?: boolean;
-  leftIcon?: React.ReactNode;
-}
+import { View, Text, TextInput, Pressable } from 'react-native';
+import { InputProps } from './types';
 
 export const Input: React.FC<InputProps> = ({
   label,
@@ -25,17 +19,18 @@ export const Input: React.FC<InputProps> = ({
         {label}
       </Text>
       <View
-        className={`flex-row items-center bg-slate-50 dark:bg-slate-800 border rounded-2xl px-4 py-3.5 ${
+        className={`flex-row items-center bg-slate-50 dark:bg-slate-800 border rounded-2xl px-4 h-14 ${
           error
             ? 'border-red-500'
             : isFocused
-            ? 'border-blue-600 bg-white dark:bg-slate-900 shadow-sm'
+            ? 'border-amber-500 bg-white dark:bg-slate-900'
             : 'border-slate-200 dark:border-slate-700'
         }`}
       >
         {leftIcon && <View className="mr-3">{leftIcon}</View>}
         <TextInput
-          className={`flex-1 text-base text-slate-900 dark:text-white p-0 ${className}`}
+          className={`flex-1 text-base text-slate-900 dark:text-white h-full ${className}`}
+          style={{ paddingVertical: 0, textAlignVertical: 'center' }}
           placeholderTextColor="#94A3B8"
           secureTextEntry={isPassword && !showPassword}
           onFocus={() => setIsFocused(true)}
@@ -43,8 +38,8 @@ export const Input: React.FC<InputProps> = ({
           {...props}
         />
         {isPassword && (
-          <Pressable onPress={() => setShowPassword(!showPassword)} className="ml-2">
-            <Text className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+          <Pressable onPress={() => setShowPassword(!showPassword)} className="ml-2 py-1 px-2">
+            <Text className="text-xs font-bold text-amber-600 dark:text-amber-400">
               {showPassword ? 'HIDE' : 'SHOW'}
             </Text>
           </Pressable>
