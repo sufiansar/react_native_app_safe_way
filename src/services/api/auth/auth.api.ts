@@ -1,12 +1,18 @@
 import { request } from '../client';
 
 export const authApi = {
-  // Login
-  login: (data: { email: string; passwordHash: string }) =>
-    request('/auth/login', {
+  // Login (Sends both password and passwordHash so bcrypt never receives undefined)
+  login: (data: { email: string; password?: string; passwordHash?: string }) => {
+    const pwd = data.password || data.passwordHash || '';
+    return request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify(data),
-    }),
+      body: JSON.stringify({
+        email: data.email,
+        password: pwd,
+        passwordHash: pwd,
+      }),
+    });
+  },
 
   // Verify 2FA
   verify2FA: (data: { otp: string; email: string }) =>

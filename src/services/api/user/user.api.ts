@@ -2,18 +2,32 @@ import { request } from '../client';
 
 export const userApi = {
   // Register User
-  registerUser: (data: { name: string; email: string; passwordHash: string }) =>
-    request('/user', {
+  registerUser: (data: { name: string; email: string; password?: string; passwordHash?: string }) => {
+    const pwd = data.password || data.passwordHash || '';
+    return request('/user', {
       method: 'POST',
-      body: JSON.stringify(data),
-    }),
+      body: JSON.stringify({
+        name: data.name,
+        email: data.email,
+        password: pwd,
+        passwordHash: pwd,
+      }),
+    });
+  },
 
   // Create Admin
-  createAdmin: (data: { name: string; email: string; passwordHash: string }) =>
-    request('/user/create-admin', {
+  createAdmin: (data: { name: string; email: string; password?: string; passwordHash?: string }) => {
+    const pwd = data.password || data.passwordHash || '';
+    return request('/user/create-admin', {
       method: 'POST',
-      body: JSON.stringify(data),
-    }),
+      body: JSON.stringify({
+        name: data.name,
+        email: data.email,
+        password: pwd,
+        passwordHash: pwd,
+      }),
+    });
+  },
 
   // Submit Identity Verification
   submitIdentityVerification: (formData: any) =>
