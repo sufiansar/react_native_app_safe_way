@@ -9,10 +9,10 @@ export const policeApi = {
     }),
 
   // Auto Add Nearby Police Stations
-  autoAddNearbyPolice: (data: { latitude: number; longitude: number; radius = 10 }) =>
+  autoAddNearbyPolice: (data: { latitude: number; longitude: number; radius?: number }) =>
     request('/police-contacts/auto-add-nearby', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ radius: 10, ...data }),
     }),
 
   // Get My Police Contacts
